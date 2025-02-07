@@ -4,3 +4,4 @@ pydantic==2.9.2
 pdfminer.six==20240706
 pydantic-settings==2.7.1
 pydantic_core==2.23.4
+python-multipart==0.0.20
