@@ -43,5 +43,4 @@ async def read_pdf(base64_pdf: str = Form(...)):
         return PDFResponse(pages=0, text="", success=False, message=f"Error decodificando el archivo: {str(e)}")
 
 if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    app.run(debug=True)
