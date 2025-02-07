@@ -42,5 +42,5 @@ async def read_pdf(base64_pdf: str = Form(...)):
     except Exception as e:
         return PDFResponse(pages=0, text="", success=False, message=f"Error decodificando el archivo: {str(e)}")
 
-if __name__ == "__main__":
-    app.run(debug=True)
+#if __name__ == "__main__":
+#    app.run(debug=True)
