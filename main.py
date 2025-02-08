@@ -5,16 +5,14 @@ Created on Thu Feb  6 21:34:27 2025
 @author: Desarrollador
 """
 
-from fastapi import FastAPI, UploadFile, Form
+from fastapi import FastAPI, UploadFile, File
 from pydantic import BaseModel
 from pdfminer.high_level import extract_text
 from pdfminer.pdfparser import PDFSyntaxError
-import base64
 from io import BytesIO
 import uvicorn
 import os
 from datetime import datetime
-import random
 
 app = FastAPI()
 
@@ -22,7 +20,6 @@ app = FastAPI()
 class PageEmbedding(BaseModel):
     page_number: int
     text: str
-    embedding: list
 
 class PDFResponse(BaseModel):
     document_id: str
@@ -32,13 +29,8 @@ class PDFResponse(BaseModel):
     page_count: int
     pages: list[PageEmbedding]
 
-# Simulamos la creación de embeddings. En la práctica, usarías un modelo de LLM como OpenAI, Hugging Face, etc.
-def generate_embedding(text: str) -> list:
-    # Simulando embeddings aleatorios como ejemplo.
-    return [random.random() for _ in range(512)]  # Supongamos que los embeddings son de dimensión 512.
-
 # Función que extrae el texto y cuenta las páginas
-def get_pdf_text_and_page_count(pdf_bytes: bytes) -> PDFResponse:
+def get_pdf_text_and_page_count(pdf_bytes: bytes, pdf_filename: str) -> PDFResponse:
     try:
         text = extract_text(BytesIO(pdf_bytes)).strip()
         if text:
@@ -47,18 +39,16 @@ def get_pdf_text_and_page_count(pdf_bytes: bytes) -> PDFResponse:
             page_count = len(pages)
             pages_info = []
 
-            # Por cada página, generamos el texto y el embedding correspondiente
+            # Por cada página, generamos el texto correspondiente
             for i, page_text in enumerate(pages):
-                embedding = generate_embedding(page_text)
                 pages_info.append({
                     "page_number": i + 1,
-                    "text": page_text.strip(),
-                    "embedding": embedding
+                    "text": page_text.strip()
                 })
 
             return PDFResponse(
                 document_id="documento_12345",  # Aquí puedes generar un ID único si lo necesitas.
-                pdf_filename="documento.pdf",
+                pdf_filename=pdf_filename,
                 upload_date=datetime.now().strftime('%Y-%m-%d'),
                 author="Autor del PDF",  # Esta parte se puede personalizar si tienes esta información.
                 page_count=page_count,
@@ -67,43 +57,40 @@ def get_pdf_text_and_page_count(pdf_bytes: bytes) -> PDFResponse:
         else:
             return PDFResponse(
                 document_id="documento_12345",
-                pdf_filename="documento.pdf",
+                pdf_filename=pdf_filename,
                 upload_date=datetime.now().strftime('%Y-%m-%d'),
                 author="Autor del PDF",
                 page_count=0,
-                pages=[],
-                success=False,
-                message="No se pudo extraer texto del PDF."
+                pages=[]
             )
     except PDFSyntaxError as e:
         return PDFResponse(
             document_id="documento_12345",
-            pdf_filename="documento.pdf",
+            pdf_filename=pdf_filename,
             upload_date=datetime.now().strftime('%Y-%m-%d'),
             author="Autor del PDF",
             page_count=0,
             pages=[],
-            success=False,
             message=f"Error de sintaxis en el PDF: {str(e)}"
         )
     except Exception as e:
         return PDFResponse(
             document_id="documento_12345",
-            pdf_filename="documento.pdf",
+            pdf_filename=pdf_filename,
             upload_date=datetime.now().strftime('%Y-%m-%d'),
             author="Autor del PDF",
             page_count=0,
             pages=[],
-            success=False,
             message=f"Error al procesar el PDF: {str(e)}"
         )
 
 # Endpoint para leer el PDF y devolver la respuesta
 @app.post("/read-pdf", response_model=PDFResponse)
-async def read_pdf(base64_pdf: str = Form(...)):
+async def read_pdf(file: UploadFile = File(...)):
     try:
-        pdf_bytes = base64.b64decode(base64_pdf)
-        response = get_pdf_text_and_page_count(pdf_bytes)
+        # Leemos el archivo PDF directamente como bytes
+        pdf_bytes = await file.read()
+        response = get_pdf_text_and_page_count(pdf_bytes, file.filename)
         return response
     except Exception as e:
         return PDFResponse(
@@ -113,8 +100,7 @@ async def read_pdf(base64_pdf: str = Form(...)):
             author="Autor del PDF",
             page_count=0,
             pages=[],
-            success=False,
-            message=f"Error decodificando el archivo: {str(e)}"
+            message=f"Error procesando el archivo: {str(e)}"
         )
 
 #if __name__ == "__main__":
