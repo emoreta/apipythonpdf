@@ -11,6 +11,7 @@ from pdfminer.high_level import extract_text
 from pdfminer.pdfparser import PDFSyntaxError
 import base64
 from io import BytesIO
+import uvicorn
 
 app = FastAPI()
 
