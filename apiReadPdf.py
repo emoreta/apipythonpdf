@@ -12,6 +12,7 @@ from pdfminer.pdfparser import PDFSyntaxError
 import base64
 from io import BytesIO
 import uvicorn
+import os
 
 app = FastAPI()
 
