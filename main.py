@@ -13,6 +13,8 @@ from io import BytesIO
 import uvicorn
 import os
 from datetime import datetime
+from PyPDF2 import PdfFileReader
+import io
 
 app = FastAPI()
 
@@ -29,10 +31,25 @@ class PDFResponse(BaseModel):
     page_count: int
     pages: list[PageEmbedding]
 
+# Función para extraer el autor del PDF
+def extract_pdf_author(pdf_bytes: bytes) -> str:
+    try:
+        reader = PdfFileReader(io.BytesIO(pdf_bytes))
+        metadata = reader.getDocumentInfo()
+        author = metadata.author if metadata.author else "Desconocido"
+        return author
+    except Exception as e:
+        return "Desconocido"  # Si no se puede extraer el autor, retornamos "Desconocido"
+
 # Función que extrae el texto y cuenta las páginas
 def get_pdf_text_and_page_count(pdf_bytes: bytes, pdf_filename: str) -> PDFResponse:
     try:
+        # Extraemos el texto del PDF
         text = extract_text(BytesIO(pdf_bytes)).strip()
+        
+        # Extraemos el autor del PDF
+        author = extract_pdf_author(pdf_bytes)
+        
         if text:
             # Dividir el texto por páginas, que normalmente se marca con '\x0c' (fin de página en PDF)
             pages = text.split('\x0c')  # Cada página se separa por '\x0c'
@@ -46,39 +63,45 @@ def get_pdf_text_and_page_count(pdf_bytes: bytes, pdf_filename: str) -> PDFRespo
                     "text": page_text.strip()
                 })
 
+            # Generar un document_id aleatorio con fecha y hora
+            document_id = f"document_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+
             return PDFResponse(
-                document_id="documento_12345",  # Aquí puedes generar un ID único si lo necesitas.
+                document_id=document_id,
                 pdf_filename=pdf_filename,
                 upload_date=datetime.now().strftime('%Y-%m-%d'),
-                author="Autor del PDF",  # Esta parte se puede personalizar si tienes esta información.
+                author=author,
                 page_count=page_count,
                 pages=pages_info
             )
         else:
+            document_id = f"document_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
             return PDFResponse(
-                document_id="documento_12345",
+                document_id=document_id,
                 pdf_filename=pdf_filename,
                 upload_date=datetime.now().strftime('%Y-%m-%d'),
-                author="Autor del PDF",
+                author=author,
                 page_count=0,
                 pages=[]
             )
     except PDFSyntaxError as e:
+        document_id = f"document_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
         return PDFResponse(
-            document_id="documento_12345",
+            document_id=document_id,
             pdf_filename=pdf_filename,
             upload_date=datetime.now().strftime('%Y-%m-%d'),
-            author="Autor del PDF",
+            author="Desconocido",
             page_count=0,
             pages=[],
             message=f"Error de sintaxis en el PDF: {str(e)}"
         )
     except Exception as e:
+        document_id = f"document_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
         return PDFResponse(
-            document_id="documento_12345",
+            document_id=document_id,
             pdf_filename=pdf_filename,
             upload_date=datetime.now().strftime('%Y-%m-%d'),
-            author="Autor del PDF",
+            author="Desconocido",
             page_count=0,
             pages=[],
             message=f"Error al procesar el PDF: {str(e)}"
@@ -97,7 +120,7 @@ async def read_pdf(file: UploadFile = File(...)):
             document_id="documento_12345",
             pdf_filename="documento.pdf",
             upload_date=datetime.now().strftime('%Y-%m-%d'),
-            author="Autor del PDF",
+            author="Desconocido",
             page_count=0,
             pages=[],
             message=f"Error procesando el archivo: {str(e)}"
