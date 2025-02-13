@@ -6,6 +6,7 @@ Created on Thu Feb  6 21:34:27 2025
 """
 
 from fastapi import FastAPI, UploadFile, Form
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from pdfminer.high_level import extract_text
 from pdfminer.pdfparser import PDFSyntaxError
@@ -15,6 +16,15 @@ import uvicorn
 import os
 
 app = FastAPI()
+
+# Configuración de CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Permite todas las fuentes. Cambia esto por una lista específica de dominios en producción.
+    allow_credentials=True,
+    allow_methods=["*"],  # Permite todos los métodos (GET, POST, etc.)
+    allow_headers=["*"],  # Permite todos los encabezados
+)
 
 class PDFResponse(BaseModel):
     pages: int
